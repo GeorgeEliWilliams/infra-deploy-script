@@ -1,0 +1,12 @@
+[2025-10-22 17:32:50] INFO: Collecting deployment parameters.
+[2025-10-22 17:35:08] INFO: Found SSH key at /Users/user/Downloads/Script.pem (permissions: 400).
+[2025-10-22 17:35:17] INFO: Parameters summary (PAT hidden):
+[2025-10-22 17:35:17] INFO:   Repo URL:    https://github.com/docker/getting-started.git
+[2025-10-22 17:35:17] INFO:   Branch:      master
+[2025-10-22 17:35:17] INFO:   Remote:      ubuntu@63.33.217.242
+[2025-10-22 17:35:17] INFO:   SSH key:     /Users/user/Downloads/Script.pem
+[2025-10-22 17:35:17] INFO:   App port:    8000
+[2025-10-22 17:35:17] INFO:   Clone dir:   .
+[2025-10-22 17:35:27] INFO: User input collected and validated.
+[2025-10-22 17:35:27] INFO: Cloning repository.
+[2025-10-22 17:35:27] INFO: Repository 'getting-started' already exists. Pulling latest changes...

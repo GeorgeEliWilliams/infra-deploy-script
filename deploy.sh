@@ -9,9 +9,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-###########################
+
 # Basic metadata / logfile
-###########################
+
 TIMESTAMP="$(date +'%Y%m%d_%H%M%S')"
 LOGFILE="./deploy_${TIMESTAMP}.log"
 # Logger functions write to both stdout/stderr and logfile
@@ -26,9 +26,9 @@ _on_err() {
 }
 trap _on_err INT TERM ERR
 
-###########################
+
 # Helper validation funcs #
-###########################
+
 is_valid_repo_url() {
   local url="$1"
   if printf '%s' "$url" | grep -Eq '^(https?://|git@|ssh://)'; then
@@ -54,17 +54,17 @@ expand_path() {
   printf '%s' "$p"
 }
 
-###########################
+
 # CLI flags
-###########################
+
 CLEANUP=0
 if [ "${1-}" = "--cleanup" ] || [ "${1-}" = "-c" ]; then
   CLEANUP=1
 fi
 
-###########################
+
 # Prompt helper functions #
-###########################
+
 prompt() {
   local varname="$1"; local prompt_text="$2"; local default="${3-}"
   local input
@@ -86,9 +86,9 @@ prompt_secret() {
   printf -v "$varname" "%s" "$input"
 }
 
-###########################
+
 # Stage 1: Collect Input
-###########################
+
 log "Collecting deployment parameters."
 
 # 1) Repo URL
@@ -160,9 +160,9 @@ fi
 
 log "User input collected and validated."
 
-###########################
+
 # Stage 2-3: Clone & verify locally
-###########################
+
 log "Cloning repository."
 
 cd "$LOCAL_CLONE_DIR"
@@ -212,9 +212,9 @@ fi
 
 log "Repository validation complete. Ready for remote deployment."
 
-###########################
+
 # Helper: remote SSH exec
-###########################
+
 remote_exec() {
   ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "$@"
 }
@@ -224,9 +224,9 @@ remote_exec_sudo() {
   ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "sudo bash -lc '$1'"
 }
 
-###########################
+
 # Stage 4-6: Remote setup + deploy
-###########################
+
 log "Starting remote setup and deployment to ${REMOTE_USER}@${REMOTE_HOST}"
 
 # Quick SSH connectivity check (dry-run)
