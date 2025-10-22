@@ -54,3 +54,35 @@ It is designed for AWS EC2 environments but can run on any Linux-based host with
 ### 1️⃣ Make the Script Executable
 ```bash
 chmod +x deploy.sh
+```
+
+### 2️⃣ Run the Script
+```bash
+./deploy.sh
+```
+
+The script will interactively ask for:
+- Git repository URL
+- Personal Access Token (optional)
+- Branch name
+- Remote SSH username
+- Remote server IP
+- SSH key path
+- Application internal port
+- Local clone directory
+
+### 3️⃣ Confirm and Deploy
+After reviewing the summary, type y to confirm.
+The script will:
+
+- Clone or update your repo locally.
+
+- Upload files to the EC2 instance.
+
+- Install Docker and Nginx (if missing).
+
+- Build and run the Docker container.
+
+- Configure Nginx to proxy traffic on port 80 to your container port.
+
+- Validate the deployment automatically.
