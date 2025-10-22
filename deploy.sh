@@ -159,4 +159,76 @@ fi
 
 # REPO_URL, PAT, BRANCH, REMOTE_USER, REMOTE_HOST, SSH_KEY_PATH, APP_PORT, LOCAL_CLONE_DIR
 
-log "Stage 1 complete: user input collected and validated."
+log "user input collected and validated."
+
+#####################################
+# Clone or Update the Repo #
+#####################################
+
+log "Cloning repository."
+
+cd "$LOCAL_CLONE_DIR"
+
+# Extract repo name from URL (remove .git if present)
+REPO_NAME=$(basename "$REPO_URL" .git)
+
+# If directory already exists, pull latest changes instead
+if [ -d "$REPO_NAME/.git" ]; then
+  log "Repository '$REPO_NAME' already exists. Pulling latest changes..."
+  cd "$REPO_NAME"
+
+  # Ensure we’re on the right branch
+  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "")
+  if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+    log "Switching branch from $CURRENT_BRANCH to $BRANCH."
+    git fetch origin "$BRANCH" || err "Failed to fetch branch $BRANCH."
+    git checkout "$BRANCH" || err "Failed to switch to branch $BRANCH."
+  fi
+
+  # Pull latest updates
+  git pull origin "$BRANCH" || {
+    err "Failed to pull latest changes. Check your access or network."
+    exit 1
+  }
+
+else
+  # Clone new repository
+  log "Cloning new repository: $REPO_URL"
+  if [[ "$REPO_URL" =~ ^https:// ]]; then
+    # HTTPS clone using PAT if provided
+    if [ -n "$PAT" ]; then
+      # Inject PAT safely (not visible in process list)
+      AUTH_URL=$(echo "$REPO_URL" | sed -E "s#https://#https://${PAT}@#")
+      git clone --branch "$BRANCH" "$AUTH_URL" || {
+        err "Failed to clone repo using PAT."
+        exit 1
+      }
+    else
+      git clone --branch "$BRANCH" "$REPO_URL" || {
+        err "Failed to clone HTTPS repo (missing PAT?)."
+        exit 1
+      }
+    fi
+  else
+    # SSH clone (uses ssh-agent / key)
+    git clone --branch "$BRANCH" "$REPO_URL" || {
+      err "Failed to clone SSH repo. Check your SSH key and GitHub access."
+      exit 1
+    }
+  fi
+
+  cd "$REPO_NAME"
+fi
+
+# Verify Dockerfile or docker-compose.yml exists
+if [ -f "Dockerfile" ]; then
+  log "Dockerfile found ✅"
+elif [ -f "docker-compose.yml" ]; then
+  log "docker-compose.yml found ✅"
+else
+  err "No Dockerfile or docker-compose.yml found in repository."
+  exit 1
+fi
+
+log "Repository validation complete. Ready for remote deployment in next stage."
+
