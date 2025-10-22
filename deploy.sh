@@ -232,3 +232,89 @@ fi
 
 log "Repository validation complete. Ready for remote deployment in next stage."
 
+###############################################################################
+# Remote setup and deployment
+###############################################################################
+
+log "Starting Stage 3: Remote server setup and deployment."
+
+# Function to run remote commands via SSH
+remote_exec() {
+  ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "$@"
+}
+
+# 1️⃣ Check SSH connection
+log "Checking SSH connection to remote server..."
+if remote_exec "echo '✅ SSH connection established successfully.'"; then
+  log "SSH connection successful."
+else
+  err "SSH connection failed. Verify IP, username, and key path."
+  exit 1
+fi
+
+# 2️⃣ Install Docker if missing
+log "Checking Docker installation on remote server..."
+if ! remote_exec "command -v docker >/dev/null 2>&1"; then
+  log "Docker not found. Installing Docker..."
+
+  # Remove malformed docker.list if it exists
+  remote_exec "sudo rm -f /etc/apt/sources.list.d/docker.list"
+
+  # Install prerequisites
+  remote_exec "sudo apt-get update -y && sudo apt-get install -y ca-certificates curl gnupg lsb-release"
+
+  # Create keyring directory
+  remote_exec "sudo install -m 0755 -d /etc/apt/keyrings"
+
+  # Import Docker GPG key non-interactively
+  remote_exec "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --batch --yes -o /etc/apt/keyrings/docker.gpg"
+
+  # Add Docker repo (ensure remote eval happens)
+  remote_exec "echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null"
+
+  # Install Docker components
+  remote_exec "sudo apt-get update -y && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+
+  # Enable and start Docker
+  remote_exec "sudo systemctl enable docker && sudo systemctl start docker"
+  log "Docker installed successfully ✅"
+else
+  log "Docker already installed ✅"
+fi
+
+# 3️⃣ Ensure Docker service is running
+remote_exec "sudo systemctl enable docker && sudo systemctl start docker"
+log "Docker service ensured to be active."
+
+# 4️⃣ Verify Docker Compose
+if ! remote_exec "docker compose version >/dev/null 2>&1"; then
+  log "Docker Compose plugin not found. Installing standalone Docker Compose..."
+  remote_exec "sudo curl -L 'https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)' -o /usr/local/bin/docker-compose"
+  remote_exec "sudo chmod +x /usr/local/bin/docker-compose"
+  log "Docker Compose installed."
+else
+  log "Docker Compose already available ✅"
+fi
+
+# 5️⃣ Clone or pull latest repo on remote host
+APP_DIR="app_deploy_dir"
+
+log "Checking for existing app directory on remote server..."
+if remote_exec "[ -d ~/$APP_DIR/.git ]"; then
+  log "App directory exists. Pulling latest changes..."
+  remote_exec "cd ~/$APP_DIR && git pull"
+else
+  log "App directory not found. Cloning fresh copy..."
+  remote_exec "git clone -b $BRANCH $REPO_URL ~/$APP_DIR"
+fi
+
+# 6️⃣ Build and run the container
+log "Building and running Docker container on remote server..."
+remote_exec "cd ~/$APP_DIR && sudo docker build -t app_image ."
+remote_exec "sudo docker rm -f app_container >/dev/null 2>&1 || true"
+remote_exec "sudo docker run -d -p 80:$APP_PORT --name app_container app_image"
+
+log "Application deployed successfully and running on port 80!"
+log "You can visit http://$REMOTE_HOST to verify."
